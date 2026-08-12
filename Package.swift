@@ -14,7 +14,7 @@ let package = Package(
         .executableTarget(
             name: "App",
             dependencies: [],
-            path: "Sources/App"
+            path: "Sources"
         )
     ]
 )
