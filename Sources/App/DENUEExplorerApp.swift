@@ -9,6 +9,12 @@ struct DENUEExplorerApp: App {
         // Esto fuerza a la app a ser 'regular' (con Dock y menús) y le da foco de teclado inmediato.
         NSApplication.shared.setActivationPolicy(.regular)
         NSApplication.shared.activate(ignoringOtherApps: true)
+        
+        do {
+            try DatabaseManager.shared.createTables()
+        } catch {
+            print(error)
+        }
     }
 
     var body: some Scene {

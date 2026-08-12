@@ -9,6 +9,7 @@ enum AppState {
 
 struct TestView: View {
     @State private var state: AppState = .idle
+    @State private var localDbMessage: String = "Esperando accion de SQLite..."
     
     var body: some View {
         VStack(spacing: 24) {
@@ -84,6 +85,38 @@ struct TestView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            
+            Divider()
+            
+            Text("SQLite Local Test")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            HStack(spacing: 16) {
+                Button("Insertar Mock Local") {
+                    do {
+                        try DatabaseManager.shared.insertSmokeTestBusiness()
+                        localDbMessage = "Exito: Registro insertado correctamente."
+                    } catch {
+                        localDbMessage = "Error al insertar: \(error.localizedDescription)"
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                
+                Button("Contar Registros") {
+                    do {
+                        let count = try DatabaseManager.shared.fetchBusinessCount()
+                        localDbMessage = "Total de registros en DB: \(count)"
+                    } catch {
+                        localDbMessage = "Error al contar: \(error.localizedDescription)"
+                    }
+                }
+                .buttonStyle(.bordered)
+            }
+            
+            Text(localDbMessage)
+                .foregroundColor(.secondary)
+                .font(.subheadline)
         }
         .padding(32)
     }
