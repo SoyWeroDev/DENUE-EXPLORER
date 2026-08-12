@@ -7,13 +7,17 @@ let package = Package(
         .macOS(.v13)
     ],
     products: [
-        .executable(name: "DENUEExplorer", targets: ["App"])
+        .executable(name: "DENUEExplorer", targets: ["DENUEExplorerApp"])
     ],
-    dependencies: [],
+    dependencies: [
+        .package(url: "https://github.com/stephencelis/SQLite.swift.git", from: "0.14.1")
+    ],
     targets: [
         .executableTarget(
-            name: "App",
-            dependencies: [],
+            name: "DENUEExplorerApp",
+            dependencies: [
+                .product(name: "SQLite", package: "SQLite.swift")
+            ],
             path: "Sources"
         )
     ]

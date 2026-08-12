@@ -8,7 +8,6 @@ enum AppState {
 }
 
 struct TestView: View {
-    @State private var token: String = ""
     @State private var state: AppState = .idle
     
     var body: some View {
@@ -16,10 +15,6 @@ struct TestView: View {
             Text("INEGI API Smoke Test")
                 .font(.largeTitle)
                 .fontWeight(.bold)
-            
-            SecureField("Ingresa el Token de INEGI", text: $token)
-                .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: 400)
             
             Button(action: {
                 Task {
@@ -35,14 +30,14 @@ struct TestView: View {
             }
             .buttonStyle(.borderedProminent)
             .controlSize(.large)
-            .disabled(token.isEmpty || isLoading)
+            .disabled(isLoading)
             
             Divider()
             
             Group {
                 switch state {
                 case .idle:
-                    Text("Ingresa tu token y presiona el botón para iniciar la prueba.")
+                    Text("Presiona el boton para leer el token del archivo .env e iniciar la prueba.")
                         .foregroundColor(.secondary)
                 case .loading:
                     VStack(spacing: 12) {
@@ -80,7 +75,7 @@ struct TestView: View {
                         Image(systemName: "exclamationmark.triangle.fill")
                             .foregroundColor(.red)
                             .font(.largeTitle)
-                        Text("Error de Conexión")
+                        Text("Error de Conexion")
                             .font(.headline)
                         Text(errorMessage)
                             .foregroundColor(.secondary)
@@ -100,13 +95,15 @@ struct TestView: View {
     
     @MainActor
     private func testConnection() async {
+        guard let token = EnvironmentManager.shared.get("INEGI_API_TOKEN") else {
+            state = .error("No se encontro la variable INEGI_API_TOKEN en el archivo .env. Asegurate de crearlo en la raiz del proyecto.")
+            return
+        }
+        
         state = .loading
         do {
             let result = try await NetworkManager.shared.testINEGIConnection(token: token)
-            let limit = 1000
-            let trimmedResult = String(result.prefix(limit))
-            let displayResult = result.count > limit ? trimmedResult + "\n\n... (Resultados truncados, se recibieron \(result.count) caracteres en total)" : trimmedResult
-            state = .success(displayResult)
+            state = .success(result)
         } catch {
             state = .error(error.localizedDescription)
         }

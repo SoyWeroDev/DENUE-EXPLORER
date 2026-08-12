@@ -1,17 +1,31 @@
 import Foundation
 
+struct InegiBusiness: Codable {
+    let CLEE: String
+    let Nombre: String
+    let Razon_social: String
+    let Latitud: String
+    let Longitud: String
+}
+
 enum NetworkError: Error {
     case invalidURL
     case invalidResponse
     case requestFailed(statusCode: Int)
+    case timeout
 }
 
 extension NetworkError: LocalizedError {
     var errorDescription: String? {
         switch self {
-        case .invalidURL: return "La URL de la API es inválida."
-        case .invalidResponse: return "La respuesta del servidor no es válida o falló al procesar los datos."
-        case .requestFailed(let statusCode): return "La solicitud falló con código de estado HTTP: \(statusCode)."
+        case .invalidURL: 
+            return "La URL de la API es invalida."
+        case .invalidResponse: 
+            return "La respuesta del servidor no es valida o fallo al procesar los datos."
+        case .requestFailed(let statusCode): 
+            return "La solicitud fallo con codigo de estado HTTP: \(statusCode)."
+        case .timeout: 
+            return "Tiempo de espera agotado. El servidor del INEGI no respondio en 10 segundos."
         }
     }
 }
@@ -30,9 +44,18 @@ final class NetworkManager {
         }
         
         var request = URLRequest(url: url)
-        request.timeoutInterval = 15 // Timeout corto para la prueba de humo
+        request.timeoutInterval = 10
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let data: Data
+        let response: URLResponse
+        
+        do {
+            (data, response) = try await URLSession.shared.data(for: request)
+        } catch let urlError as URLError where urlError.code == .timedOut {
+            throw NetworkError.timeout
+        } catch {
+            throw error
+        }
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw NetworkError.invalidResponse
@@ -42,10 +65,9 @@ final class NetworkManager {
             throw NetworkError.requestFailed(statusCode: httpResponse.statusCode)
         }
         
-        guard let jsonString = String(data: data, encoding: .utf8) else {
-            throw NetworkError.invalidResponse
-        }
+        let decoder = JSONDecoder()
+        let businesses = try decoder.decode([InegiBusiness].self, from: data)
         
-        return jsonString
+        return "Validacion exitosa: Se lograron decodificar \(businesses.count) empresas empatando perfectamente con la estructura esperada."
     }
 }
