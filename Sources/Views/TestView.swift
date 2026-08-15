@@ -10,6 +10,9 @@ enum AppState {
 struct TestView: View {
     @State private var state: AppState = .idle
     @State private var localDbMessage: String = "Esperando accion de SQLite..."
+    @State private var isDownloading: Bool = false
+    @State private var syncMessage: String = "Listo para descargar ZIP."
+    @State private var downloadTask: Task<Void, Never>?
     
     var body: some View {
         VStack(spacing: 24) {
@@ -64,6 +67,7 @@ struct TestView: View {
                                 .padding()
                                 .textSelection(.enabled)
                         }
+                        .frame(maxHeight: 150)
                         .background(Color(NSColor.textBackgroundColor))
                         .cornerRadius(8)
                         .overlay(
@@ -117,6 +121,39 @@ struct TestView: View {
             Text(localDbMessage)
                 .foregroundColor(.secondary)
                 .font(.subheadline)
+            
+            Divider()
+            
+            Text("Sincronizacion Masiva (Descarga y Unzip)")
+                .font(.title2)
+                .fontWeight(.bold)
+            
+            Button(action: {
+                if isDownloading {
+                    downloadTask?.cancel()
+                } else {
+                    downloadTask = Task {
+                        await startSync()
+                    }
+                }
+            }) {
+                HStack {
+                    if isDownloading {
+                        ProgressView().controlSize(.small)
+                        Text("Cancelar Descarga")
+                    } else {
+                        Image(systemName: "arrow.down.doc.fill")
+                        Text("Descargar e Instalar Base de Datos DENUE")
+                    }
+                }
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(isDownloading ? .red : .blue)
+            
+            Text(syncMessage)
+                .foregroundColor(.secondary)
+                .font(.subheadline)
+                .multilineTextAlignment(.center)
         }
         .padding(32)
     }
@@ -140,5 +177,36 @@ struct TestView: View {
         } catch {
             state = .error(error.localizedDescription)
         }
+    }
+    
+    @MainActor
+    private func startSync() async {
+        guard let url = EnvironmentManager.shared.get("DENUE_BULK_DOWNLOAD_URL") else {
+            syncMessage = "Error: No se encontro DENUE_BULK_DOWNLOAD_URL en .env"
+            return
+        }
+        
+        isDownloading = true
+        syncMessage = "Descargando ZIP masivo y extrayendo en 2do plano (puede tardar minutos)..."
+        
+        do {
+            let extractedURL = try await SyncManager.shared.downloadAndUnzipDENUE(from: url)
+            if !Task.isCancelled {
+                syncMessage = "Exito! terminationStatus = 0.\nArchivos extraidos en:\n\(extractedURL.path)"
+            }
+        } catch is CancellationError {
+            syncMessage = "Descarga cancelada por el usuario."
+        } catch let urlError as URLError where urlError.code == .cancelled {
+            syncMessage = "Descarga cancelada por el usuario."
+        } catch {
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                syncMessage = "Descarga cancelada por el usuario."
+            } else {
+                syncMessage = "Error en sincronizacion: \(error.localizedDescription)"
+            }
+        }
+        
+        isDownloading = false
     }
 }

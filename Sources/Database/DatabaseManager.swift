@@ -51,7 +51,7 @@ final class DatabaseManager {
     
     func insertSmokeTestBusiness() throws {
         let insert = Self.businesses.insert(
-            Self.clee <- "TEST-000000001",
+            Self.clee <- "TEST-\(UUID().uuidString)",
             Self.nombre <- "Empresa de Prueba Smoke Test",
             Self.razonSocial <- "Desarrollo y Pruebas S.A. de C.V.",
             Self.latitud <- "20.6766",

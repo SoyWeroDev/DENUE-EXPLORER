@@ -20,7 +20,7 @@ struct DENUEExplorerApp: App {
     var body: some Scene {
         WindowGroup {
             TestView()
-                .frame(width: 600, height: 400)
+                .frame(width: 800, height: 800)
         }
         .windowResizability(.contentSize)
         .commands {
